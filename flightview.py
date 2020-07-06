@@ -4,8 +4,18 @@ import pandas as pd
 from scipy import interpolate
 from matplotlib import pyplot as plt
 from pymongo import MongoClient
-from mpl_toolkits.basemap import Basemap
 import flightphase
+import os
+import sys
+import conda
+
+conda_file_dir = conda.__file__
+conda_dir = conda_file_dir.split('lib')[0]
+proj_lib = os.path.join(os.path.join(conda_dir, 'share'), 'proj')
+os.environ["PROJ_LIB"] = proj_lib
+
+from mpl_toolkits.basemap import Basemap
+
 
 
 def fill_nan(A):
@@ -20,27 +30,23 @@ def fill_nan(A):
 # get script arguments
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--db", dest="db", required=True)
+parser.add_argument("--folder", default="data/saved_csvs", dest="folder")
 parser.add_argument(
     "--coll", dest="coll", required=True, help="Flights data collection name"
 )
 args = parser.parse_args()
 
-DB = args.db
+folder = args.folder
 COLL = args.coll
 
 # Configuration for the database
-mongo_client = MongoClient("localhost", 27017)
-mcoll = mongo_client[DB][COLL]
+# mongo_client = MongoClient("localhost", 27017)
+# mcoll = mongo_client[DB][COLL]
 
 plt.figure(figsize=(10, 4))
 
-res = mcoll.find()
-for r in res:
-    icao = r["icao"]
-    print(r["_id"], icao)
-
-    df = pd.DataFrame(r)
+for file_path in os.listdir(folder):
+    df = pd.read_csv(f"{folder}/{file_path}")
     df.drop_duplicates(subset=["ts"], inplace=True)
 
     times = np.array(df["ts"])
@@ -48,11 +54,11 @@ for r in res:
     lats = np.array(df["lat"])
     lons = np.array(df["lon"])
 
-    if "alt" in r:
+    if "alt" in df.columns:
         alts = np.array(df["alt"])
         spds = np.array(df["spd"])
         rocs = np.array(df["roc"])
-    elif "H" in r:
+    elif "H" in df.columns:
         Hs = np.array(df["H"])
         vgxs = np.array(df["vgx"])
         vgys = np.array(df["vgy"])
@@ -63,7 +69,8 @@ for r in res:
 
     try:
         labels = flightphase.fuzzylabels(times, alts, spds, rocs)
-    except:
+    except NameError as e:
+        print("Could not compute fuzzy labels: ", e)
         continue
 
     colormap = {

@@ -9,8 +9,8 @@ from collections import OrderedDict
 from sklearn.cluster import DBSCAN
 
 # Constants
-HOST = "localhost"  # MongoDB host
-PORT = 27017  # MongoDB port
+# HOST = "localhost"  # MongoDB host
+# PORT = 27017  # MongoDB port
 MIN_DATA_SIZA = 100  # minimal number of data in a flight
 CHUNK_SIZE = 50  # number of icaos to be processed in chunks
 TEST_FLAG = True  # if this is a test run
@@ -20,31 +20,35 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--csv", dest="input_csv", required=True, help="decoded adsb csv file"
 )
-parser.add_argument("--db", dest="db", required=True)
+parser.add_argument("--folder", default="data/saved_csvs", dest="folder")
 parser.add_argument("--coll", dest="output_coll", help="Flight collection name")
 args = parser.parse_args()
 
-mdb = args.db
+folder = args.folder
 pos_csv = args.input_csv
 flights_coll = args.output_coll
 
-mongo_client = MongoClient(HOST, PORT)
+# mongo_client = MongoClient(HOST, PORT)
 
 if flights_coll:
     TEST_FLAG = False
-    mcollflights = mongo_client[mdb][flights_coll]
-    mcollflights.drop()  # clear the segment collection first
+    # mcollflights = mongo_client[mdb][flights_coll]
+    # mcollflights.drop()  # clear the segment collection first
 
 print("[1] Querying database.")
 
 df = pd.read_csv(pos_csv)
 df.drop_duplicates(subset=["ts"], inplace=True)
 
+out_df = pd.DataFrame()
+
 # Find all ICAO IDs in the dataset
 dfcount = df.groupby("icao").size().reset_index(name="counts")
 icaos = dfcount[dfcount.counts > 100].icao.tolist()
 
 print("[2] %d number of valid ICAOs." % len(icaos))
+
+filename_counter = 0
 
 for i in range(0, len(icaos), CHUNK_SIZE):
 
@@ -55,14 +59,14 @@ for i in range(0, len(icaos), CHUNK_SIZE):
     print("  [a] fetching records")
 
     dfchunk = df[df.icao.isin(chunk)]
-    ids = dfchunk["icao"].as_matrix()
-    lats = dfchunk["lat"].as_matrix()
-    lons = dfchunk["lon"].as_matrix()
-    alts = dfchunk["alt"].as_matrix()
-    spds = dfchunk["spd"].as_matrix()
-    hdgs = dfchunk["hdg"].as_matrix()
-    rocs = dfchunk["roc"].as_matrix()
-    times = dfchunk["ts"].as_matrix()
+    ids = dfchunk["icao"].to_numpy()
+    lats = dfchunk["lat"].to_numpy()
+    lons = dfchunk["lon"].to_numpy()
+    alts = dfchunk["alt"].to_numpy()
+    spds = dfchunk["spd"].to_numpy()
+    hdgs = dfchunk["hdg"].to_numpy()
+    rocs = dfchunk["roc"].to_numpy()
+    times = dfchunk["ts"].to_numpy()
 
     #####################################################################
     # Continous fligh path extraction using machine learning algorithms
@@ -137,7 +141,7 @@ for i in range(0, len(icaos), CHUNK_SIZE):
                 c = c[c[:, 0].argsort()]  # sort by ts
 
                 if len(c) > MIN_DATA_SIZA:
-                    mcollflights.insert_one(
+                    out_df = pd.DataFrame(
                         OrderedDict(
                             [
                                 ("icao", k),
@@ -151,6 +155,8 @@ for i in range(0, len(icaos), CHUNK_SIZE):
                             ]
                         )
                     )
+                    out_df.to_csv(f"{folder}/saved_{filename_counter}.csv")
+                    filename_counter += 1
 
         # Plot result
         if TEST_FLAG:
