@@ -48,7 +48,7 @@ If you use the code for your research, please cite:
 2. extract flight from ADS-B positions
 
     ```bash
-    $ python flightextract.py --csv data/sample_adsb_decoded.csv --db test_db --coll flights
+    $ python flightextract.py --csv data/sample_adsb_decoded.csv --coll flights
     ```
 
 ## 2. Fuzzy segmentation
@@ -70,7 +70,7 @@ flightphase.fuzzylabels(times, alts, spds, rocs)
 Use the same previously created MongoDB collection:
 
 ```bash
-$ python flightview.py --db test_db --coll flights
+$ python flightview.py --coll flights
 ```
 
 

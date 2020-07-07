@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 from scipy import interpolate
 from matplotlib import pyplot as plt
-from pymongo import MongoClient
+from matplotlib.lines import Line2D
+# from pymongo import MongoClient
 import flightphase
 import os
 import sys
@@ -45,7 +46,19 @@ COLL = args.coll
 
 plt.figure(figsize=(10, 4))
 
-for file_path in os.listdir(folder):
+colormap = {
+    "GND": "black",
+    "CL": "green",
+    "CR": "blue",
+    "DE": "orange",
+    "LVL": "purple",
+    "NA": "red",
+}
+legend_lines = []
+for lab, col in colormap.items():
+    legend_lines.append(Line2D([0], [0], color=col, label=lab))
+
+for i, file_path in enumerate(os.listdir(folder)):
     df = pd.read_csv(f"{folder}/{file_path}")
     df.drop_duplicates(subset=["ts"], inplace=True)
 
@@ -69,23 +82,14 @@ for file_path in os.listdir(folder):
 
     try:
         labels = flightphase.fuzzylabels(times, alts, spds, rocs)
-    except NameError as e:
-        print("Could not compute fuzzy labels: ", e)
+    except:
+        print(f"Could not compute fuzzy labels for file {file_path}.")
         continue
-
-    colormap = {
-        "GND": "black",
-        "CL": "green",
-        "CR": "blue",
-        "DE": "orange",
-        "LVL": "purple",
-        "NA": "red",
-    }
 
     colors = [colormap[l] for l in labels]
 
     # setup mercator map projection.
-    plt.suptitle("press any key to continue to next example...")
+    # plt.suptitle("press any key to continue to next example...")
 
     plt.subplot(121)
     m = Basemap(
@@ -106,8 +110,11 @@ for file_path in os.listdir(folder):
     plt.subplot(122)
     plt.scatter(times, alts, marker=".", c=colors, lw=0)
     plt.ylabel("altitude (ft)")
+    plt.legend(handles=legend_lines, prop={'size': 8})
 
     # plt.tight_layout()
-    plt.draw()
-    plt.waitforbuttonpress(-1)
+    plt.savefig(f"data/saved_figures/fig_{i}.png")
+    # plt.draw()
+    # plt.waitforbuttonpress(-1)
     plt.clf()
+

@@ -7,10 +7,16 @@ from scipy.interpolate import UnivariateSpline
 STATE_DIFF_MARGIN = 0.2
 
 # logic states
-alt_range = np.arange(0, 40000, 1)
-roc_range = np.arange(-4000, 4000, 0.1)
-spd_range = np.arange(0, 600, 1)
+alt_range = np.arange(0, 40000, 1) # ft
+roc_range = np.arange(-4000, 4000, 0.1) # ft/m
+spd_range = np.arange(0, 600, 1) # kts
 states = np.arange(0, 6, 0.01)
+
+# Converting range parameters to our metric system
+# alt_range = np.arange(0, 1250, 1)  # m
+# roc_range = np.arange(-20, 20, 0.1) # m/s
+# spd_range = np.arange(0, 300, 1) # m/s
+# states = np.arange(0, 6, 0.01)
 
 alt_gnd = fuzz.zmf(alt_range, 0, 200)
 alt_lo = fuzz.gaussmf(alt_range, 10000, 5000)
@@ -42,7 +48,7 @@ def plot_logics():
     plt.plot(alt_range, alt_lo, lw=2, label="Low")
     plt.plot(alt_range, alt_hi, lw=2, label="High")
     plt.ylim([-0.05, 1.05])
-    plt.ylabel("Altitude (ft)")
+    plt.ylabel("Altitude (m)")
     plt.yticks([0, 1])
     plt.legend(prop={"size": 7})
 
@@ -51,7 +57,7 @@ def plot_logics():
     plt.plot(roc_range, roc_plus, lw=2, label="Positive")
     plt.plot(roc_range, roc_minus, lw=2, label="Negative")
     plt.ylim([-0.05, 1.05])
-    plt.ylabel("RoC (ft/m)")
+    plt.ylabel("RoC (m/s)")
     plt.yticks([0, 1])
     plt.legend(prop={"size": 7})
 
@@ -116,7 +122,7 @@ def fuzzylabels(ts, alts, spds, rocs, twindow=60):
         spdchk = spds[mask]
         rocchk = rocs[mask]
 
-        # mean value or extream value as range
+        # mean value or extreme value as range
         alt = max(min(np.mean(altchk), alt_range[-1]), alt_range[0])
         spd = max(min(np.mean(spdchk), spd_range[-1]), spd_range[0])
         roc = max(min(np.mean(rocchk), roc_range[-1]), roc_range[0])

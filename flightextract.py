@@ -4,7 +4,7 @@ import pandas as pd
 from itertools import cycle
 from matplotlib import pyplot as plt
 from sklearn import preprocessing
-from pymongo import MongoClient
+# from pymongo import MongoClient
 from collections import OrderedDict
 from sklearn.cluster import DBSCAN
 
@@ -39,8 +39,6 @@ print("[1] Querying database.")
 
 df = pd.read_csv(pos_csv)
 df.drop_duplicates(subset=["ts"], inplace=True)
-
-out_df = pd.DataFrame()
 
 # Find all ICAO IDs in the dataset
 dfcount = df.groupby("icao").size().reset_index(name="counts")
