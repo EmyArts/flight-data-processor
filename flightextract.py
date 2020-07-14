@@ -20,20 +20,20 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--csv", dest="input_csv", required=True, help="decoded adsb csv file"
 )
-parser.add_argument("--folder", default="data/saved_csvs", dest="folder")
-parser.add_argument("--coll", dest="output_coll", help="Flight collection name")
+parser.add_argument("--folder", default="data/saved_csvs", dest='folder', help="Folder to save csvs to.")
+parser.add_argument("--test", default=False, dest="test", help="Testing or not", action='store_true')
+parser.add_argument("--flight_numbers", default=True, dest="flight_numbers", help="Use if flight numbers are not given as entry \'n\'", action='store_false')
 args = parser.parse_args()
 
 folder = args.folder
 pos_csv = args.input_csv
-flights_coll = args.output_coll
+TEST_FLAG = args.test
+FLIGHT_N = args.flight_numbers
 
 # mongo_client = MongoClient(HOST, PORT)
 
-if flights_coll:
-    TEST_FLAG = False
-    # mcollflights = mongo_client[mdb][flights_coll]
-    # mcollflights.drop()  # clear the segment collection first
+# if flights_coll:
+#     TEST_FLAG = False
 
 print("[1] Querying database.")
 
@@ -65,6 +65,8 @@ for i in range(0, len(icaos), CHUNK_SIZE):
     hdgs = dfchunk["hdg"].to_numpy()
     rocs = dfchunk["roc"].to_numpy()
     times = dfchunk["ts"].to_numpy()
+    if FLIGHT_N:
+        flight_nr = dfchunk["n"].to_numpy()
 
     #####################################################################
     # Continous fligh path extraction using machine learning algorithms
@@ -91,29 +93,51 @@ for i in range(0, len(icaos), CHUNK_SIZE):
     # aggregate data by there ids
     # ----------------------------
     acs = {}
-    for i in range(len(ids)):
-        if ids[i] not in list(acs.keys()):
-            acs[ids[i]] = []
+    if FLIGHT_N:
+        for i in range(len(ids)):
+            if ids[i] not in list(acs.keys()):
+                acs[ids[i]] = []
 
-        acs[ids[i]].append(
-            [
-                times_norm[i],
-                alts_norm[i],
-                times[i],
-                lats[i],
-                lons[i],
-                int(alts[i]),
-                spds[i],
-                hdgs[i],
-                rocs[i],
-            ]
-        )
+            acs[ids[i]].append(
+                [
+                    times_norm[i],
+                    alts_norm[i],
+                    times[i],
+                    lats[i],
+                    lons[i],
+                    int(alts[i]),
+                    spds[i],
+                    hdgs[i],
+                    rocs[i],
+                    flight_nr[i]
+                ]
+            )
+    else:
+        for i in range(len(ids)):
+            if ids[i] not in list(acs.keys()):
+                acs[ids[i]] = []
+
+            acs[ids[i]].append(
+                [
+                    times_norm[i],
+                    alts_norm[i],
+                    times[i],
+                    lats[i],
+                    lons[i],
+                    int(alts[i]),
+                    spds[i],
+                    hdgs[i],
+                    rocs[i],
+                ]
+            )
+
 
     print("  [d] start clustering, and saving results to DB")
 
     # Apply clustering method
     # ------------------------
-    cluster = DBSCAN(eps=dt, min_samples=MIN_DATA_SIZA)
+    if not FLIGHT_N:
+        cluster = DBSCAN(eps=dt, min_samples=MIN_DATA_SIZA)
 
     acsegs = {}
     total = len(list(acs.keys()))
@@ -125,10 +149,13 @@ for i in range(0, len(icaos), CHUNK_SIZE):
 
         data = np.asarray(acs[k])
 
-        tdata = np.copy(data)
-        tdata[:, 1:] = 0
-        cluster.fit(tdata)
-        labels = cluster.labels_
+        if FLIGHT_N:
+            labels = data[:, 9]
+        else:
+            tdata = np.copy(data)
+            tdata[:, 1:] = 0
+            cluster.fit(tdata)
+            labels = cluster.labels_
         n_clusters = np.unique(labels).size
         # print("n_clusters : %d" % n_clusters)
 

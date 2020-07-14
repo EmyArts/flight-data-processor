@@ -102,9 +102,10 @@ for i, file_path in enumerate(os.listdir(folder)):
     )
     m.fillcontinents()
     # plot SIL as a fix point
-    latSIL = 51.989884
-    lonSIL = 4.375374
-    m.plot(lonSIL, latSIL, latlon=True, marker="o", c="red", zorder=9)
+    # latSIL = 51.989884
+    # lonSIL = 4.375374
+    # m.plot(lonSIL, latSIL, latlon=True, marker="o", c="red", zorder=9)
+
     m.scatter(lons, lats, latlon=True, marker=".", c=colors, lw=0, zorder=10)
 
     plt.subplot(122)
